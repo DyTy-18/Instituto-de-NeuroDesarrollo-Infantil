@@ -272,8 +272,8 @@
         <div class="bubbles">
             <span></span><span></span><span></span><span></span><span></span>
         </div>
-        <div class="badge">Registro de Pacientes</div>
-        <h1>¡Bienvenido a Fono Bri!</h1>
+        <div class="badge">INDI</div>
+        <h1>Dia del Niño</h1>
         <p>Completa el formulario y elige tu especialista</p>
     </div>
 
