@@ -342,7 +342,7 @@
                         </button>
                         <div class="slots-panel">
                             <div class="calendly-inline-widget"
-                                 data-url="https://calendly.com/indilpzbo/30min">
+                                 data-url="https://calendly.com/indilpzbo/fonoaudiologia-brittany-lara-clone">
                             </div>
                         </div>
                     </div>
@@ -358,9 +358,9 @@
                     <div class="prof-icon">🗣️</div>
                     <div class="prof-info">
                         <div class="prof-specialty">Fonoaudiología</div>
-                        <div class="prof-name">Carla Carpero</div>
+                        <div class="prof-name">Brittany Lara - Carla Campero</div>
                         <div class="prof-details">
-                            <span>📞 60638334</span>
+                            <span>📞 75862308</span>
                             <span>🕐 18:00 – 20:00</span>
                             <span>⏱ Cada 30 min</span>
                         </div>
@@ -369,14 +369,14 @@
                         </button>
                         <div class="slots-panel">
                             <div class="calendly-inline-widget"
-                                 data-url="https://calendly.com/indilpzbo/fonoaudiologia-brittany-lara-clone">
+                                 data-url="https://calendly.com/indilpzbo/30min">
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {{-- Brittany Lara — Fonoaudiología --}}
-                <div class="prof-card"
+                {{-- <div class="prof-card"
                      data-id="{{ $especialistas['brittany'] ?? '' }}"
                      data-especialidad="fonoaudiologia"
                      data-wa="59175862308"
@@ -399,7 +399,7 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> --}}
 
             </div>
 
@@ -412,28 +412,98 @@
 @section('scripts')
 <script src="https://assets.calendly.com/assets/external/widget.js" async></script>
 <script>
-    const form     = document.getElementById('registroForm');
     const alertMsg = document.getElementById('alertMsg');
 
     document.querySelectorAll('.btn-reservar').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             hideAlert();
-            const panel = btn.closest('.prof-info').querySelector('.slots-panel');
 
-            // Cerrar otros paneles abiertos
-            document.querySelectorAll('.slots-panel.open').forEach(p => {
-                if (p !== panel) {
+            const card   = btn.closest('.prof-card');
+            const panel  = btn.closest('.prof-info').querySelector('.slots-panel');
+            const isOpen = panel.classList.contains('open');
+
+            // Si ya está abierto, solo cerrarlo
+            if (isOpen) {
+                panel.classList.remove('open');
+                btn.textContent = 'Ver horarios disponibles ▾';
+                return;
+            }
+
+            // Validar campos del formulario
+            const nombre    = document.getElementById('nombre_nino').value.trim();
+            const edad      = document.getElementById('edad').value.trim();
+            const escolar   = document.getElementById('escolaridad').value;
+            const tutores   = document.getElementById('tutores').value.trim();
+
+            if (!nombre || !edad || !escolar || !tutores) {
+                showAlert('error', 'Por favor completa todos los campos antes de elegir horario.');
+                document.getElementById('nombre_nino').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            // Obtener datos del especialista desde el prof-card
+            const especialistaId  = card.dataset.id;
+            const especialidad    = card.dataset.especialidad;
+
+            btn.textContent = 'Guardando…';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('{{ route("formulario.store") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nombre_nino:     nombre,
+                        edad:            parseInt(edad),
+                        escolaridad:     escolar,
+                        tutores:         tutores,
+                        especialidad:    especialidad,
+                        especialista_id: parseInt(especialistaId),
+                    }),
+                });
+
+                // Leer texto primero para poder diagnosticar si no es JSON
+                const text = await res.text();
+                let json;
+                try {
+                    json = JSON.parse(text);
+                } catch {
+                    showAlert('error', 'Error del servidor (' + res.status + '). Intenta nuevamente.');
+                    btn.textContent = 'Ver horarios disponibles ▾';
+                    btn.disabled = false;
+                    return;
+                }
+
+                if (!res.ok || !json.success) {
+                    const errores = json.errors
+                        ? Object.values(json.errors).flat().join(' ')
+                        : (json.message || 'Error al guardar. Intenta nuevamente.');
+                    showAlert('error', errores);
+                    btn.textContent = 'Ver horarios disponibles ▾';
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Datos guardados — cerrar otros paneles y abrir este
+                document.querySelectorAll('.slots-panel.open').forEach(p => {
                     p.classList.remove('open');
                     p.previousElementSibling.textContent = 'Ver horarios disponibles ▾';
-                }
-            });
+                });
 
-            const isOpen = panel.classList.toggle('open');
-            btn.textContent = isOpen ? 'Ocultar horarios ▴' : 'Ver horarios disponibles ▾';
+                panel.classList.add('open');
+                btn.textContent = 'Ocultar horarios ▴';
+                btn.disabled = false;
 
-            // Inicializar Calendly cuando se abre por primera vez
-            if (isOpen && window.Calendly) {
-                Calendly.initInlineWidgets();
+                if (window.Calendly) Calendly.initInlineWidgets();
+
+            } catch (e) {
+                showAlert('error', 'Error de red. Verifica tu conexión e intenta nuevamente.');
+                btn.textContent = 'Ver horarios disponibles ▾';
+                btn.disabled = false;
             }
         });
     });
